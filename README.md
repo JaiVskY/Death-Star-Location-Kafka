@@ -8,3 +8,6 @@ up good
 running restart
 
 docker exec -it kafka /usr/bin/kafka-topics --create --topic iss-tracking --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+
+
+docker-compose down -v to stop docker and wipe ot ll files
