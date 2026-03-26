@@ -15,7 +15,7 @@ def delivery_report(err, msg):
 
 def fetch_iss_location():
     try:
-        response = requests.get("http://open-notify.org/Open-Notify-API/ISS-Location-Now/")
+        response = requests.get("http://api.open-notify.org/iss-now.json")
         data = response.json()
         return {
             "timestamp": data['timestamp'],
@@ -26,11 +26,12 @@ def fetch_iss_location():
         print(f"Error fetching API: {e}")
         return None
 
-print("Starting ISS Producer... Press Ctrl+C to stop.")
+print("Starting ISS Producer... Press Ctrl+C to stop (keyboard interrupt).")
 
 try:
     while True:
-        iss_data = fetch_iss_location()
+        iss_data = fetch_iss_location()  #Gets the fresh coordinates.
+        print(iss_data) #Prints the coordinates in the terminal.
         if iss_data:
             # Send data as a JSON string
             producer.produce(
