@@ -1,0 +1,45 @@
+version: '3.8'              # The version of Docker Compose file format. 3.8 is standard for modern setups.
+services:                   # Defines the different "apps" or containers that will run.
+  kafka:                    # The name of our specific service.
+    image: confluentinc/cp-kafka:7.8.3  # The official Confluent image (includes Kafka and management tools).
+    container_name: kafka   # Sets a fixed name so we can run commands like 'docker exec -it kafka'.
+    ports:
+      - "9092:9092"         # Maps [Your Computer's Port] to [The Container's Port]. 
+                            # This allows 'localhost:9092' in Python to reach Kafka inside the box.
+    
+    environment:            # These are the "Settings" or "Config" variables for Kafka.
+      # --- BASIC CONFIG ---
+      KAFKA_NODE_ID: 1      # Every Kafka server needs a unique ID. Since we only have one, it's '1'.
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' # A unique string that identifies this specific Kafka cluster.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # Kafka keeps track of where consumers (like your ISS tracker) 
+                                                # stopped reading. Since we have 1 server, we only need 1 copy.
+
+      # --- KRAFT MODE (No Zookeeper) ---
+      KAFKA_KRAFT_MODE: 'true'            # Tells Kafka to use the modern "KRaft" engine instead of Zookeeper.
+      KAFKA_PROCESS_ROLES: 'broker,controller' # This container acts as both the "Storage" (Broker) 
+                                               # and the "Brain" (Controller).
+
+      # --- NETWORKING (The Phone Lines) ---
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT' 
+      # Defines names for connection types. We use 'PLAINTEXT' (no encryption) for simplicity.
+
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093'
+      # Where Kafka "listens" for incoming data. 0.0.0.0 means "accept connections from anywhere."
+
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      # This is what Kafka tells your Python script: "Hey, connect to me at localhost:9092!"
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER' # Tells the "Brain" which port to use for internal decisions.
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093' # Tells the cluster who the "voters" are for leadership.
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'   # How different parts of Kafka talk to each other.
+
+      # --- STORAGE ---
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs # The folder INSIDE the container where messages are stored.
+
+    volumes:
+      - kafka_data:/var/lib/kafka/data # Connects the volume below to the internal data folder.
+                                       # NOTE: Since your LOG_DIRS is set to /tmp, this volume 
+                                       # currently won't save your ISS data! (See fix below).
+
+volumes:
+  kafka_data:               # Creates a persistent "virtual hard drive" managed by Docker.
